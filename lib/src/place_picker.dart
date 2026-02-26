@@ -277,16 +277,25 @@ class _PlacePickerState extends State<PlacePicker> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-        onWillPop: () {
+    return PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
           searchBarController.clearOverlay();
-          return Future.value(true);
         },
         child: FutureBuilder<PlaceProvider>(
           future: _futureProvider,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              // Show loader with a proper Scaffold and background color
+              return Scaffold(
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                appBar: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  automaticallyImplyLeading: false,
+                ),
+                body: const Center(child: CircularProgressIndicator()),
+              );
             } else if (snapshot.hasData) {
               provider = snapshot.data;
               return MultiProvider(
@@ -314,6 +323,7 @@ class _PlacePickerState extends State<PlacePicker> {
               );
             }
 
+            // Error or unknown state: show error in a Scaffold
             final children = <Widget>[];
             if (snapshot.hasError) {
               children.addAll([
@@ -323,7 +333,7 @@ class _PlacePickerState extends State<PlacePicker> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: Text('Error: ${snapshot.error}'),
+                  child: Text('Error: \u001b[200msnapshot.error\u001b[0m'),
                 )
               ]);
             } else {
@@ -331,6 +341,12 @@ class _PlacePickerState extends State<PlacePicker> {
             }
 
             return Scaffold(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                automaticallyImplyLeading: false,
+              ),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
