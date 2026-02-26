@@ -26,8 +26,8 @@ enum PinState { Preparing, Idle, Dragging }
 enum SearchingState { Idle, Searching }
 
 class PlacePicker extends StatefulWidget {
-  PlacePicker({
-    Key? key,
+  const PlacePicker({
+    super.key,
     required this.apiKey,
     this.onPlacePicked,
     required this.initialPosition,
@@ -77,7 +77,7 @@ class PlacePicker extends StatefulWidget {
     this.onMapTypeChanged,
     this.zoomGesturesEnabled = true,
     this.zoomControlsEnabled = false,
-  }) : super(key: key);
+  });
 
   final String apiKey;
 
@@ -233,10 +233,10 @@ class PlacePicker extends StatefulWidget {
   final bool zoomControlsEnabled;
 
   @override
-  _PlacePickerState createState() => _PlacePickerState();
+  PlacePickerState createState() => PlacePickerState();
 }
 
-class _PlacePickerState extends State<PlacePicker> {
+class PlacePickerState extends State<PlacePicker> {
   GlobalKey appBarKey = GlobalKey();
   late final Future<PlaceProvider> _futureProvider;
   PlaceProvider? provider;
@@ -265,10 +265,10 @@ class _PlacePickerState extends State<PlacePicker> {
       widget.httpClient,
       headers,
     );
-    provider.sessionToken = Uuid().v4();
+    provider.sessionToken = const Uuid().v4();
     provider.desiredAccuracy = widget.desiredLocationAccuracy;
     provider.setMapType(widget.initialMapType);
-    if (widget.useCurrentLocation != null && widget.useCurrentLocation!) {
+    if (widget.useCurrentLocation == true) {
       await provider.updateCurrentLocation(
           gracefully: widget.ignoreLocationPermissionErrors);
     }
@@ -333,11 +333,11 @@ class _PlacePickerState extends State<PlacePicker> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: Text('Error: \u001b[200msnapshot.error\u001b[0m'),
+                  child: Text('Error: ${snapshot.error}'),
                 )
               ]);
             } else {
-              children.add(CircularProgressIndicator());
+              children.add(const CircularProgressIndicator());
             }
 
             return Scaffold(
@@ -362,7 +362,7 @@ class _PlacePickerState extends State<PlacePicker> {
   Widget _buildSearchBar(BuildContext context) {
     return Row(
       children: <Widget>[
-        SizedBox(width: 15),
+        const SizedBox(width: 15),
         provider!.placeSearchingState == SearchingState.Idle &&
                 (widget.automaticallyImplyAppBarLeading ||
                     widget.onTapBack != null)
@@ -383,7 +383,7 @@ class _PlacePickerState extends State<PlacePicker> {
                 ),
                 color: Colors.black.withAlpha(128),
                 padding: EdgeInsets.zero)
-            : Container(),
+            : const SizedBox.shrink(),
         Expanded(
           child: AutoCompleteSearch(
               appBarKey: appBarKey,
@@ -414,12 +414,12 @@ class _PlacePickerState extends State<PlacePicker> {
               autocompleteOnTrailingWhitespace:
                   widget.autocompleteOnTrailingWhitespace),
         ),
-        SizedBox(width: 5),
+        const SizedBox(width: 5),
       ],
     );
   }
 
-  _pickPrediction(Prediction prediction) async {
+  Future<void> _pickPrediction(Prediction prediction) async {
     provider!.placeSearchingState = SearchingState.Searching;
 
     final PlacesDetailsResponse response =
@@ -431,9 +431,7 @@ class _PlacePickerState extends State<PlacePicker> {
 
     if (response.errorMessage?.isNotEmpty == true ||
         response.status == "REQUEST_DENIED") {
-      if (widget.onAutoCompleteFailed != null) {
-        widget.onAutoCompleteFailed!(response.status);
-      }
+      widget.onAutoCompleteFailed?.call(response.status);
       return;
     }
 
@@ -449,9 +447,9 @@ class _PlacePickerState extends State<PlacePicker> {
     provider!.placeSearchingState = SearchingState.Idle;
   }
 
-  _moveTo(double latitude, double longitude) async {
+  Future<void> _moveTo(double latitude, double longitude) async {
     if (provider?.mapController == null) return;
-    GoogleMapController? controller = provider!.mapController;
+    final controller = provider!.mapController;
     await controller!.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
@@ -462,7 +460,7 @@ class _PlacePickerState extends State<PlacePicker> {
     );
   }
 
-  _moveToCurrentPosition() async {
+  Future<void> _moveToCurrentPosition() async {
     if (provider?.currentPosition == null) return;
     await _moveTo(provider!.currentPosition!.latitude,
         provider!.currentPosition!.longitude);
@@ -500,9 +498,7 @@ class _PlacePickerState extends State<PlacePicker> {
       onToggleMapType: () {
         if (provider == null) return;
         provider!.switchMapType();
-        if (widget.onMapTypeChanged != null) {
-          widget.onMapTypeChanged!(provider!.mapType);
-        }
+        widget.onMapTypeChanged?.call(provider!.mapType);
       },
       onMyLocation: () async {
         // Prevent to click many times in short period.
@@ -533,31 +529,28 @@ class _PlacePickerState extends State<PlacePicker> {
   Widget _buildIntroModal(BuildContext context) {
     return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
-      return showIntroModal && widget.introModalWidgetBuilder != null
-          ? Stack(children: [
-              Positioned(
-                top: 0,
-                right: 0,
-                bottom: 0,
-                left: 0,
-                child: Material(
-                  type: MaterialType.canvas,
-                  color: Color.fromARGB(128, 0, 0, 0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  child: ClipRect(),
-                ),
-              ),
-              widget.introModalWidgetBuilder!(context, () {
-                if (mounted) {
-                  setState(() {
-                    showIntroModal = false;
-                  });
-                }
-              })
-            ])
-          : Container();
+      if (!showIntroModal || widget.introModalWidgetBuilder == null) {
+        return const SizedBox.shrink();
+      }
+      return Stack(children: [
+        Positioned.fill(
+          child: Material(
+            type: MaterialType.canvas,
+            color: const Color.fromARGB(128, 0, 0, 0),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+            ),
+            child: const ClipRect(),
+          ),
+        ),
+        widget.introModalWidgetBuilder!(context, () {
+          if (mounted) {
+            setState(() {
+              showIntroModal = false;
+            });
+          }
+        })
+      ]);
     });
   }
 }
